@@ -85,6 +85,7 @@ public struct RequestConfiguration: Encodable {
     public let limit: Int?
     public let before: String?
     public let until: String?
+    public let skipPreflight: Bool?
 
     public init?(
         commitment: Commitment? = nil,
@@ -93,13 +94,15 @@ public struct RequestConfiguration: Encodable {
         filters: [[String: EncodableWrapper]]? = nil,
         limit: Int? = nil,
         before: String? = nil,
-        until: String? = nil
+        until: String? = nil,
+        skipPreflight: Bool? = nil
     ) {
         if commitment == nil, encoding == nil, dataSlice == nil, filters == nil, limit == nil, before == nil,
-           until == nil
+           until == nil, skipPreflight == nil
         {
             return nil
         }
+        
         self.commitment = commitment
         self.encoding = encoding
         self.dataSlice = dataSlice
@@ -107,10 +110,16 @@ public struct RequestConfiguration: Encodable {
         self.limit = limit
         self.before = before
         self.until = until
+        self.skipPreflight = skipPreflight
     }
 }
 
 public struct DataSlice: Encodable {
     public let offset: Int
     public let length: Int
+    
+    public init(offset: Int, length: Int) {
+        self.offset = offset
+        self.length = length
+    }
 }

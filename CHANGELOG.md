@@ -1,3 +1,35 @@
+## 2.5.3
+
+- Add rpc method getRecentPerformanceSamples
+- Change tokens repository endpoint
+
+## 2.5.2
+
+- Add convenience variables for common tokens (ETH, USDT)
+- Make signing in method prepare transaction optional if signers is not provided
+
+## 2.5.1
+
+- Add supply property for struct Wallet
+
+## 2.5.0
+
+- Add usdc to TokenList
+- Add slot info to TransactionStatus
+- Add option skipPreflight to RequestModels
+
+## 2.4.0
+
+- Replacing LoggerSwift with abstraction
+
+## 2.3.0
+
+- Added support for socket encoding response
+
+## 2.2.2
+
+- Update coingeko id for SOL and renBTC
+
 ## 2.2.1
 
 - Publish init SendingTransaction with Signature

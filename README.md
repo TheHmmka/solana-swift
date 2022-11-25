@@ -37,7 +37,7 @@ SolanaSwift is available through [CocoaPods](https://cocoapods.org). To install
 it, simply add the following line to your Podfile:
 
 ```ruby
-pod 'SolanaSwift', '~> 2.2.1'
+pod 'SolanaSwift', '~> 2.5.3'
 ```
 
 ### Swift package manager
@@ -45,7 +45,7 @@ pod 'SolanaSwift', '~> 2.2.1'
 ...
 dependencies: [
     ...
-    .package(url: "https://github.com/p2p-org/solana-swift", from: "2.2.1")
+    .package(url: "https://github.com/p2p-org/solana-swift", from: "2.5.3")
 ],
 ...
 ```
@@ -58,6 +58,23 @@ dependencies: [
 ### Import
 ```swift
 import SolanaSwift
+```
+
+### Logger
+Create a logger that confirm to SolanaSwiftLogger
+```swift
+import SolanaSwift
+
+class MyCustomLogger: SolanaSwiftLogger {
+    func log(event: String, data: String?, logLevel: SolanaSwiftLoggerLogLevel) {
+        // Custom log goes here
+    }
+}
+
+// AppDelegate or somewhere eles
+
+let customLogger: SolanaSwiftLogger = MyCustomLogger()
+SolanaSwift.Logger.setLoggers([customLogger])
 ```
 
 ### AccountStorage
@@ -149,6 +166,18 @@ for try await status in apiClient.observeSignatureStatus(signature: "jaiojsdfoij
 // statuses.last == .finalized // the signature is confirmed by all nodes
 ```
 
+Batch support
+
+```swift
+// Batch request with different types
+let req1: JSONRPCAPIClientRequest<AnyDecodable> = JSONRPCAPIClientRequest(method: "getAccountInfo", params: ["63ionHTAM94KaSujUCg23hfg7TLharchq5BYXdLGqia1"])
+let req2: JSONRPCAPIClientRequest<AnyDecodable> = JSONRPCAPIClientRequest(method: "getBalance", params: ["63ionHTAM94KaSujUCg23hfg7TLharchq5BYXdLGqia1"])
+let response = try await apiClient.batchRequest(with: [req1, req2])
+
+// Batch request with same type
+let balances: [Rpc<UInt64>?] = try await apiClient.batchRequest(method: "getBalance", params: [["63ionHTAM94KaSujUCg23hfg7TLharchq5BYXdLGqia1"], ["63ionHTAM94KaSujUCg23hfg7TLharchq5BYXdLGqia1"], ["63ionHTAM94KaSujUCg23hfg7TLharchq5BYXdLGqia1"]])
+```
+
 For the method that is not listed, use generic method `request(method:params:)` or `request(method:)` without params.
 
 ```swift
@@ -172,7 +201,7 @@ let preparedTransaction = try await blockchainClient.prepareTransaction(
     feePayer: ...
 )
 
-/// SPECIAL CASE: Prepare Sending SPL Tokens
+/// SPECIAL CASE: Prepare Sending Native SOL
 let preparedTransaction = try await blockchainClient.prepareSendingNativeSOL(
     account: account,
     to: toPublicKey,

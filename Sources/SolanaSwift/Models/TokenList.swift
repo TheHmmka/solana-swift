@@ -29,7 +29,8 @@ public struct Token: Hashable, Decodable {
         logoURI: String?,
         tags: [TokenTag] = [],
         extensions: TokenExtensions?,
-        isNative: Bool = false
+        isNative: Bool = false,
+        supply: UInt64? = nil
     ) {
         self._tags = _tags
         self.chainId = chainId
@@ -41,6 +42,7 @@ public struct Token: Hashable, Decodable {
         self.tags = tags
         self.extensions = extensions
         self.isNative = isNative
+        self.supply = supply
     }
 
     let _tags: [String]?
@@ -53,16 +55,18 @@ public struct Token: Hashable, Decodable {
     public let logoURI: String?
     public var tags: [TokenTag] = []
     public let extensions: TokenExtensions?
+    public let supply: UInt64?
     public private(set) var isNative = false
 
     enum CodingKeys: String, CodingKey {
-        case chainId, address, symbol, name, decimals, logoURI, extensions, _tags = "tags"
+        case chainId, address, symbol, name, decimals, logoURI, extensions, _tags = "tags", supply
     }
 
     public static func unsupported(
         mint: String?,
         decimals: Decimals = 0,
-        symbol: String = ""
+        symbol: String = "",
+        supply: UInt64? = nil
     ) -> Token {
         Token(
             _tags: [],
@@ -73,7 +77,8 @@ public struct Token: Hashable, Decodable {
             decimals: decimals,
             logoURI: nil,
             tags: [],
-            extensions: nil
+            extensions: nil,
+            supply: supply
         )
     }
 
@@ -85,9 +90,9 @@ public struct Token: Hashable, Decodable {
             symbol: "SOL",
             name: "Solana",
             decimals: 9,
-            logoURI: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
+            logoURI: "https://raw.githubusercontent.com/p2p-org/solana-token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
             tags: [],
-            extensions: nil,
+            extensions: TokenExtensions(coingeckoId: "solana"),
             isNative: true
         )
     }
@@ -100,25 +105,51 @@ public struct Token: Hashable, Decodable {
             symbol: "renBTC",
             name: "renBTC",
             decimals: 8,
-            logoURI: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/CDJWUqTcYTVAKXAVXoQZFes5JUFc7owSeq7eMQcDSbo5/logo.png",
+            logoURI: "https://raw.githubusercontent.com/p2p-org/solana-token-list/main/assets/mainnet/CDJWUqTcYTVAKXAVXoQZFes5JUFc7owSeq7eMQcDSbo5/logo.png",
             extensions: .init(
                 website: "https://renproject.io/",
-                bridgeContract: nil,
-                assetContract: nil,
-                address: nil,
-                explorer: nil,
-                twitter: nil,
-                github: nil,
-                medium: nil,
-                tgann: nil,
-                tggroup: nil,
-                discord: nil,
-                serumV3Usdt: nil,
                 serumV3Usdc: "74Ciu5yRzhe8TFTHvQuEVbFZJrbnCMRoohBK33NNiPtv",
-                coingeckoId: "renbtc",
-                imageUrl: nil,
-                description: nil
+                coingeckoId: "renbtc"
             )
+        )
+    }
+    
+    public static var usdc: Self {
+        .init(
+            _tags: nil,
+            chainId: 101,
+            address: PublicKey.usdcMint.base58EncodedString,
+            symbol: "USDC",
+            name: "USDC",
+            decimals: 8,
+            logoURI: "https://raw.githubusercontent.com/p2p-org/solana-token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png",
+            extensions: .init(coingeckoId: "usd-coin")
+        )
+    }
+
+    public static var usdt: Self {
+        .init(
+            _tags: nil,
+            chainId: 101,
+            address: PublicKey.usdtMint.base58EncodedString,
+            symbol: "USDT",
+            name: "USDT",
+            decimals: 6,
+            logoURI: "https://raw.githubusercontent.com/p2p-org/solana-token-list/main/assets/mainnet/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB/logo.png",
+            extensions: .init(coingeckoId: "tether")
+        )
+    }
+
+    public static var eth: Self {
+        .init(
+            _tags: nil,
+            chainId: 101,
+            address: "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs",
+            symbol: "ETH",
+            name: "Ether (Portal)",
+            decimals: 8,
+            logoURI: "https://raw.githubusercontent.com/p2p-org/solana-token-list/main/assets/mainnet/7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs/logo.png",
+            extensions: .init(coingeckoId: "ethereum")
         )
     }
 
@@ -171,4 +202,40 @@ public struct TokenExtensions: Hashable, Decodable {
     public let coingeckoId: String?
     public let imageUrl: String?
     public let description: String?
+
+    public init(
+        website: String? = nil,
+        bridgeContract: String? = nil,
+        assetContract: String? = nil,
+        address: String? = nil,
+        explorer: String? = nil,
+        twitter: String? = nil,
+        github: String? = nil,
+        medium: String? = nil,
+        tgann: String? = nil,
+        tggroup: String? = nil,
+        discord: String? = nil,
+        serumV3Usdt: String? = nil,
+        serumV3Usdc: String? = nil,
+        coingeckoId: String?,
+        imageUrl: String? = nil,
+        description: String? = nil
+    ) {
+        self.website = website
+        self.bridgeContract = bridgeContract
+        self.assetContract = assetContract
+        self.address = address
+        self.explorer = explorer
+        self.twitter = twitter
+        self.github = github
+        self.medium = medium
+        self.tgann = tgann
+        self.tggroup = tggroup
+        self.discord = discord
+        self.serumV3Usdt = serumV3Usdt
+        self.serumV3Usdc = serumV3Usdc
+        self.coingeckoId = coingeckoId
+        self.imageUrl = imageUrl
+        self.description = description
+    }
 }
