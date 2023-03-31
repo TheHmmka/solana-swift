@@ -1,10 +1,7 @@
 import Foundation
 import TweetNacl
 
-public struct Transaction: Encodable, Equatable {
-    fileprivate static let SIGNATURE_LENGTH = 64
-    fileprivate static let DEFAULT_SIGNATURE = Data(repeating: 0, count: 64)
-
+public struct NewTransaction: Encodable, Equatable {
     public var signatures = [Signature]()
     public var feePayer: PublicKey?
     public var instructions = [TransactionInstruction]()
@@ -14,8 +11,8 @@ public struct Transaction: Encodable, Equatable {
     public init() {}
     public init(
         instructions: [TransactionInstruction],
-        recentBlockhash: String?,
-        feePayer: PublicKey
+        recentBlockhash: String? = nil,
+        feePayer: PublicKey? = nil
     ) {
         self.init()
         self.instructions = instructions
@@ -25,11 +22,11 @@ public struct Transaction: Encodable, Equatable {
 
     // MARK: - Methods
 
-    public mutating func sign(signers: [Account]) throws {
+    public mutating func sign(signers: [KeyPair]) throws {
         guard !signers.isEmpty else { throw SolanaError.invalidRequest(reason: "No signers") }
 
         // unique signers
-        let signers = signers.reduce([Account]()) { signers, signer in
+        let signers = signers.reduce([KeyPair]()) { signers, signer in
             var uniqueSigners = signers
             if !uniqueSigners.contains(where: { $0.publicKey == signer.publicKey }) {
                 uniqueSigners.append(signer)
@@ -93,11 +90,11 @@ public struct Transaction: Encodable, Equatable {
 
     // MARK: - Signing
 
-    public mutating func partialSign(signers: [Account]) throws {
+    public mutating func partialSign(signers: [KeyPair]) throws {
         guard !signers.isEmpty else { throw SolanaError.invalidRequest(reason: "No signers") }
 
         // unique signers
-        let signers = signers.reduce([Account]()) { signers, signer in
+        let signers = signers.reduce([KeyPair]()) { signers, signer in
             var uniqueSigners = signers
             if !uniqueSigners.contains(where: { $0.publicKey == signer.publicKey }) {
                 uniqueSigners.append(signer)
@@ -111,7 +108,7 @@ public struct Transaction: Encodable, Equatable {
         try partialSign(message: message, signers: signers)
     }
 
-    private mutating func partialSign(message: Message, signers: [Account]) throws {
+    private mutating func partialSign(message: Message, signers: [KeyPair]) throws {
         let signData = try message.serialize()
 
         for signer in signers {
@@ -168,7 +165,7 @@ public struct Transaction: Encodable, Equatable {
 
         // programIds & accountMetas
         var programIds = [PublicKey]()
-        var accountMetas = [Account.Meta]()
+        var accountMetas = [AccountMeta]()
 
         for instruction in instructions {
             accountMetas.append(contentsOf: instruction.keys)
@@ -184,15 +181,23 @@ public struct Transaction: Encodable, Equatable {
             )
         }
 
-        // sort accountMetas, first by signer, then by writable
+        let locale = Locale(identifier: "en_US")
         accountMetas.sort { x, y -> Bool in
-            if x.isSigner != y.isSigner { return x.isSigner }
-            if x.isWritable != y.isWritable { return x.isWritable }
-            return false
+            if x.isSigner != y.isSigner {
+                // Signers always come before non-signers
+                return x.isSigner ? true : false
+            }
+            if x.isWritable != y.isWritable {
+                // Writable accounts always come before read-only accounts
+                return x.isWritable ? true : false
+            }
+            // Otherwise, sort by pubkey, stringwise.
+            return x.publicKey.base58EncodedString
+                .compare(y.publicKey.base58EncodedString, locale: locale) == .orderedAscending
         }
 
         // filterOut duplicate account metas, keeps writable one
-        accountMetas = accountMetas.reduce([Account.Meta]()) { result, accountMeta in
+        accountMetas = accountMetas.reduce([AccountMeta]()) { result, accountMeta in
             var uniqueMetas = result
             if let index = uniqueMetas.firstIndex(where: { $0.publicKey == accountMeta.publicKey }) {
                 // if accountMeta exists
@@ -204,7 +209,7 @@ public struct Transaction: Encodable, Equatable {
         }
 
         // Cull duplicate account metas
-        var uniqueMetas: [Account.Meta] = []
+        var uniqueMetas: [AccountMeta] = []
         accountMetas.forEach { accountMeta in
             let pubkey = accountMeta.publicKey.base58EncodedString
             let uniqueIndex = uniqueMetas.firstIndex { x in x.publicKey.base58EncodedString == pubkey }
@@ -224,7 +229,7 @@ public struct Transaction: Encodable, Equatable {
             uniqueMetas.insert(payerMeta, at: 0)
         } else {
             uniqueMetas.insert(
-                Account.Meta(
+                AccountMeta(
                     publicKey: feePayer,
                     isSigner: true,
                     isWritable: true
@@ -235,7 +240,7 @@ public struct Transaction: Encodable, Equatable {
 
         // accountMetas.removeAll(where: { $0.publicKey == feePayer })
         // accountMetas.insert(
-        //    Account.Meta(publicKey: feePayer, isSigner: true, isWritable: true),
+        //    AccountMeta(publicKey: feePayer, isSigner: true, isWritable: true),
         //    at: 0
         // )
 
@@ -256,10 +261,10 @@ public struct Transaction: Encodable, Equatable {
         }
 
         // header
-        var header = Message.Header()
+        var header = MessageHeader()
 
-        var signedKeys = [Account.Meta]()
-        var unsignedKeys = [Account.Meta]()
+        var signedKeys = [AccountMeta]()
+        var unsignedKeys = [AccountMeta]()
 
         uniqueMetas.forEach { accountMeta in
             // signed keys
@@ -287,7 +292,7 @@ public struct Transaction: Encodable, Equatable {
         let instructions = instructions.compile(accountKeys: accountKeys)
         try instructions.forEach { instruction in
             try instruction.accounts.forEach { keyIndex in
-                if keyIndex < 0 { throw SolanaError.assertionFailed }
+                if keyIndex < 0 { throw SolanaError.assertionFailed("") }
             }
         }
 
@@ -335,7 +340,7 @@ public struct Transaction: Encodable, Equatable {
             if let signature = signature.signature {
                 data.append(signature)
             } else {
-                data.append(Transaction.DEFAULT_SIGNATURE)
+                data.append(Constants.defaultSignature)
             }
             return data
         }
@@ -350,41 +355,41 @@ public struct Transaction: Encodable, Equatable {
         return data
     }
 
-    public static func from(data: Data) throws -> Transaction {
+    public static func from(data: Data) throws -> Self {
         var data = data
         var signatures: [String] = []
         let signatureCount = data.decodeLength()
 
         for _ in stride(from: 0, through: signatureCount - 1, by: 1) {
-            let signatureData = data.prefix(Transaction.SIGNATURE_LENGTH)
-            data = data.dropFirst(Transaction.SIGNATURE_LENGTH)
+            let signatureData = data.prefix(Constants.signatureLength)
+            data = data.dropFirst(Constants.signatureLength)
             signatures.append(Base58.encode(signatureData))
         }
 
         print(data.base64EncodedString())
-        return populate(try Transaction.Message.from(data: data), signatures)
+        return populate(try Message.from(data: data), signatures)
     }
 
-    static func populate(_ message: Transaction.Message, _ signatures: [String]) -> Transaction {
-        var transaction = Transaction()
+    static func populate(_ message: Message, _ signatures: [String]) -> Self {
+        var transaction = NewTransaction()
 
         transaction.recentBlockhash = message.recentBlockhash
         if message.header.numRequiredSignatures > 0 {
             transaction.feePayer = message.accountKeys[0]
         }
         signatures.enumerated().forEach { index, signature in
-            let sigPubkeyPair = Transaction.Signature(
+            let sigPubkeyPair = Signature(
                 signature: signature == Base58
-                    .encode(Transaction.DEFAULT_SIGNATURE) ? nil : Data(Base58.decode(signature)),
+                    .encode(Constants.defaultSignature) ? nil : Data(Base58.decode(signature)),
                 publicKey: message.accountKeys[index]
             )
             transaction.signatures.append(sigPubkeyPair)
         }
 
         message.instructions.forEach { instruction in
-            let keys: [Account.Meta] = instruction.accounts.map { account in
+            let keys: [AccountMeta] = instruction.accounts.map { account in
                 let pubkey = message.accountKeys[account]
-                return Account.Meta(
+                return AccountMeta(
                     publicKey: pubkey,
                     isSigner: transaction.signatures.contains { keyObj in keyObj.publicKey == pubkey } || message
                         .isAccountSigner(index: account),
@@ -402,27 +407,5 @@ public struct Transaction: Encodable, Equatable {
         }
 
         return transaction
-    }
-}
-
-public extension Transaction {
-    struct Signature: Encodable, Equatable {
-        public var signature: Data?
-        public var publicKey: PublicKey
-
-        enum CodingKeys: String, CodingKey {
-            case signature, publicKey
-        }
-        
-        public init(signature: Data?, publicKey: PublicKey) {
-            self.signature = signature
-            self.publicKey = publicKey
-        }
-
-        public func encode(to encoder: Encoder) throws {
-            var container = encoder.container(keyedBy: CodingKeys.self)
-            try container.encode(Base58.encode(signature?.bytes ?? []), forKey: .signature)
-            try container.encode(publicKey.base58EncodedString, forKey: .publicKey)
-        }
     }
 }
