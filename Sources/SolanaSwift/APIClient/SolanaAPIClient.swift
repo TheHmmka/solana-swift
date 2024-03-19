@@ -120,6 +120,17 @@ public protocol SolanaAPIClient {
     /// - SeeAlso https://docs.solana.com/developing/clients/jsonrpc-api#getfees
     ///
     func getFees(commitment: Commitment?) async throws -> Fee
+    
+    /// Returns a recent block hash from the ledger, a fee schedule that can be used to compute the cost of submitting a
+    /// transaction using it, and the last slot in which the blockhash will be valid.
+    /// - Parameters:
+    ///  - commitment: Optional
+    /// - Throws: APIClientError
+    /// - Returns The result field will be an array of u64 integers listing confirmed blocks starting at start_slot for
+    /// up to limit blocks, inclusive
+    /// - SeeAlso https://docs.solana.com/developing/clients/jsonrpc-api#getfees
+    ///
+    func getFeeForMessage(base64String: String, commitment: Commitment?) async throws -> UInt64
 
     /// Returns minimum balance required to make account rent exempt
     /// - Parameters:

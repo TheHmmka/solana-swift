@@ -2,6 +2,7 @@ import Foundation
 
 /// JSON RPC
 public class JSONRPCAPIClient: SolanaAPIClient {
+
     public typealias ResponseDecoder = JSONRPCResponseDecoder
     public typealias RequestEncoder = JSONRPCRequestEncoder
 
@@ -92,6 +93,14 @@ public class JSONRPCAPIClient: SolanaAPIClient {
 
     public func getFees(commitment: Commitment? = nil) async throws -> Fee {
         let result: Rpc<Fee> = try await get(method: "getFees", params: [RequestConfiguration(commitment: commitment)])
+        return result.value
+    }
+    
+    public func getFeeForMessage(
+        base64String: String,
+        commitment: Commitment? = nil
+    ) async throws -> UInt64 {
+        let result: Rpc<UInt64> = try await get(method: "getFeeForMessage", params: [base64String, RequestConfiguration(commitment: commitment)])
         return result.value
     }
 
