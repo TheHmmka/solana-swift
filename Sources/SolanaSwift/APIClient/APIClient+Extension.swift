@@ -9,8 +9,12 @@ public extension SolanaAPIClient {
         try await getMinimumBalanceForRentExemption(dataLength: span, commitment: "recent")
     }
 
-    func getRecentBlockhash() async throws -> String {
-        try await getRecentBlockhash(commitment: nil)
+//    func getRecentBlockhash() async throws -> String {
+//        try await getRecentBlockhash(commitment: nil)
+//    }
+    
+    func getLatestBlockhash() async throws -> String {
+        try await getLatestBlockhash(commitment: nil)
     }
 
     func observeSignatureStatus(signature: String) -> AsyncStream<PendingTransactionStatus> {
