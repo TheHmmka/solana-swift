@@ -36,7 +36,7 @@ public struct PublicKey: Codable, Equatable, CustomStringConvertible, Hashable {
     public init(string: String?) throws {
         guard let string = string, string.utf8.count >= PublicKey.numberOfBytes
         else {
-            throw SolanaError.other("Invalid public key input")
+            throw PublicKeyError.invalidAddress(string)
         }
         let bytes = Base58.decode(string)
         self.bytes = bytes
@@ -44,14 +44,14 @@ public struct PublicKey: Codable, Equatable, CustomStringConvertible, Hashable {
 
     public init(data: Data) throws {
         guard data.count <= PublicKey.numberOfBytes else {
-            throw SolanaError.other("Invalid public key input")
+            throw PublicKeyError.invalidAddress(.init(data: data, encoding: .utf8))
         }
         bytes = [UInt8](data)
     }
 
     public init(bytes: [UInt8]?) throws {
         guard let bytes = bytes, bytes.count <= PublicKey.numberOfBytes else {
-            throw SolanaError.other("Invalid public key input")
+            throw PublicKeyError.invalidAddress(.init(data: Data(bytes ?? []), encoding: .utf8))
         }
         self.bytes = bytes
     }
@@ -97,15 +97,23 @@ private extension Int {
     }
 }
 
+public enum PublicKeyError: Error, Equatable {
+    case notFound
+    case invalidAddress(String?)
+    case maxSeedLengthExceeded
+    case invalidSeed(reason: String?)
+}
+
 public extension PublicKey {
     static func associatedTokenAddress(
         walletAddress: PublicKey,
-        tokenMintAddress: PublicKey
+        tokenMintAddress: PublicKey,
+        tokenProgramId: PublicKey
     ) throws -> PublicKey {
         try findProgramAddress(
             seeds: [
                 walletAddress.data,
-                TokenProgram.id.data,
+                tokenProgramId.data,
                 tokenMintAddress.data,
             ],
             programId: AssociatedTokenProgram.id
@@ -130,7 +138,7 @@ public extension PublicKey {
                 continue
             }
         }
-        throw SolanaError.notFound
+        throw PublicKeyError.notFound
     }
 
     static func createProgramAddress(
@@ -141,7 +149,7 @@ public extension PublicKey {
         var data = Data()
         for seed in seeds {
             if seed.bytes.count > maxSeedLength {
-                throw SolanaError.other("Max seed length exceeded")
+                throw PublicKeyError.maxSeedLengthExceeded
             }
             data.append(seed)
         }
@@ -154,7 +162,7 @@ public extension PublicKey {
 
         // check it
         if isOnCurve(publicKeyBytes: publicKeyBytes).toBool() {
-            throw SolanaError.other("Invalid seeds, address must fall off the curve")
+            throw PublicKeyError.invalidSeed(reason: "address must fall off the curve")
         }
         return try PublicKey(data: publicKeyBytes)
     }
@@ -167,19 +175,19 @@ public extension PublicKey {
         var data = Data()
         data += fromPublicKey.data
         guard let seedData = seed.data(using: .utf8) else {
-            throw SolanaError.other("Invalid seeds")
+            throw PublicKeyError.invalidSeed(reason: nil)
         }
         data += seedData
         data += programId.data
         let hash = data.sha256()
         return try PublicKey(data: hash)
     }
-    
+
     static func isOnCurve(publicKey: String) -> Int {
         let data = Base58.decode(publicKey)
         return isOnCurve(publicKeyBytes: Data(data))
     }
-    
+
     static func isOnCurve(publicKeyBytes: Data) -> Int {
         var r = [[Int64]](repeating: NaclLowLevel.gf(), count: 4)
 
@@ -227,24 +235,13 @@ public extension PublicKey {
 }
 
 public extension PublicKey {
-    @available(*, deprecated, renamed: "TokenProgram.id")
-    static var tokenProgramId: PublicKey { TokenProgram.id }
-
     static var sysvarRent: PublicKey { "SysvarRent111111111111111111111111111111111" }
-
-    @available(*, deprecated, renamed: "SystemProgram.id")
-    static var programId: PublicKey { SystemProgram.id }
 
     static var wrappedSOLMint: PublicKey { "So11111111111111111111111111111111111111112" }
     static var solMint: PublicKey { "Ejmc1UB4EsES5oAaRN63SpoxMJidt3ZGBrqrZk49vjTZ"
     } // Arbitrary mint to represent SOL (not wrapped SOL).
 
-//    @available(*, deprecated, renamed: "OwnerValidationProgram.id")
-//    static var ownerValidationProgramId: PublicKey { OwnerValidationProgram.id }
     static var swapHostFeeAddress: PublicKey { "AHLwq66Cg3CuDJTFtwjPfwjJhifiv6rFwApQNKgX57Yg" }
-
-    @available(*, deprecated, renamed: "AssociatedTokenProgram.id")
-    static var splAssociatedTokenAccountProgramId: PublicKey { AssociatedTokenProgram.id }
 
     static var renBTCMint: PublicKey { "CDJWUqTcYTVAKXAVXoQZFes5JUFc7owSeq7eMQcDSbo5" }
     static var renBTCMintDevnet: PublicKey { "FsaLodPu4VmSwXGr3gWfwANe4vKf8XSZcCh1CEeJ3jpD" }
