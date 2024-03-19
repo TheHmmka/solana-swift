@@ -88,7 +88,7 @@ public extension SolanaBlockchainClient {
     ///   - preparedTransaction: preparedTransaction
     ///   - recentBlockhash: recentBlockhash
     /// - Returns: serializedTransaction
-    internal func signAndSerialize(
+    public func signAndSerialize(
         preparedTransaction: PreparedTransaction,
         recentBlockhash: String
     ) throws -> String {

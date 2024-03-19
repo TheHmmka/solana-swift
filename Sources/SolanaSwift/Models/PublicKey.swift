@@ -4,6 +4,23 @@ public struct PublicKey: Codable, Equatable, CustomStringConvertible, Hashable {
     public static let NULL_PUBLICKEY_BYTES: [UInt8] = Array(repeating: UInt8(0), count: numberOfBytes)
     public static let numberOfBytes = 32
     public let bytes: [UInt8]
+    
+    /*
+     */
+    
+    public var isValid: Bool {
+        guard
+            bytes.isEmpty == false,
+            PublicKey.isOnCurve(publicKeyBytes: Data(bytes)) == 1
+        else {
+            return false
+        }
+        
+        return true
+    }
+    
+    /*
+     */
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
