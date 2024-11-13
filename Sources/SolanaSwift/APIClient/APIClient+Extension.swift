@@ -6,7 +6,7 @@ public extension SolanaAPIClient {
     // MARK: - Convenience methods
 
     func getMinimumBalanceForRentExemption(span: UInt64) async throws -> UInt64 {
-        try await getMinimumBalanceForRentExemption(dataLength: span, commitment: "recent")
+        try await getMinimumBalanceForRentExemption(dataLength: span, commitment: nil)
     }
 
 //    func getRecentBlockhash() async throws -> String {
@@ -163,10 +163,10 @@ public extension SolanaAPIClient {
         return info
     }
 
-    /// Get fee per signature
-    func getLamportsPerSignature() async throws -> UInt64? {
-        try await getFees(commitment: nil).feeCalculator?.lamportsPerSignature
-    }
+//    /// Get fee per signature
+//    func getLamportsPerSignature() async throws -> UInt64? {
+//        try await getFees(commitment: nil).feeCalculator?.lamportsPerSignature
+//    }
 
     /// Convenience method for request(method:params:) with no params
     func request<Entity>(method: String) async throws -> Entity where Entity: Decodable {
